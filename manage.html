@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการผู้เช่า - นภาดาวอพาร์ตเมนต์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .table-compact th, .table-compact td { padding: 0.5rem 0.2rem; font-size: 0.9rem; vertical-align: middle; }
+    @media (max-width: 768px) { .table-compact th, .table-compact td { font-size: 0.75rem; } .table-compact .btn { font-size: 0.75rem; padding: 0.3rem 0.5rem; } }
+  </style>
+</head>
+<body>
+  <div id="layout-sidebar"></div>
+  <div class="main-wrapper">
+    <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
+    
+    <div class="main-content">
+      <div class="container-fluid bg-white p-2 p-md-4 rounded shadow-sm">
+        <div id="loadingRoomMsg" class="text-center text-primary my-4"><div class="spinner-border"></div></div>
+        <div class="table-responsive d-none" id="roomTableSection" style="max-height: 70vh; overflow-y: auto;">
+          <table class="table table-hover table-bordered align-middle text-center table-compact" style="width: 100%;">
+            <thead class="table-light sticky-top"><tr><th style="width: 15%;">ห้อง</th><th style="width: 15%;">สถานะ</th><th style="width: 35%;">ผู้เช่า</th><th style="width: 15%;">ค่าเช่า</th><th style="width: 20%;">จัดการ</th></tr></thead>
+            <tbody id="roomTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="checkInModal" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-success text-white py-2"><h6 class="modal-title mb-0"><i class="bi bi-box-arrow-in-right"></i> ย้ายเข้า <span id="ciRoomName"></span></h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="font-size: 0.9rem;"><form id="ciForm" onsubmit="submitCheckIn(event)"><div class="mb-2"><label class="fw-bold">วันที่เข้าพัก</label><input type="date" class="form-control form-control-sm" id="ciDate" required></div><div class="mb-2"><label class="fw-bold">ชื่อผู้เช่า</label><input type="text" class="form-control form-control-sm" id="ciTenant" required></div><div class="row mb-2"><div class="col-6"><label class="fw-bold">เงินประกัน</label><input type="number" class="form-control form-control-sm" id="ciDeposit" required></div><div class="col-6"><label class="fw-bold">ค่าเช่า</label><input type="number" class="form-control form-control-sm" id="ciRent" required></div></div><div class="row mb-3"><div class="col-6"><label class="fw-bold text-info">มิเตอร์น้ำแรกเข้า</label><input type="number" step="0.1" class="form-control form-control-sm" id="ciWater" required></div><div class="col-6"><label class="fw-bold text-warning">มิเตอร์ไฟแรกเข้า</label><input type="number" step="0.1" class="form-control form-control-sm" id="ciElec" required></div></div><input type="hidden" id="ciPhase"> <input type="hidden" id="ciRoom"><button type="submit" class="btn btn-success btn-sm w-100 fw-bold" id="btnCheckIn">บันทึกข้อมูลย้ายเข้า</button><div id="ciStatus" class="mt-2 text-center fw-bold small"></div></form></div></div></div></div>
+
+  <div class="modal fade" id="checkOutModal" tabindex="-1" data-bs-backdrop="static"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header bg-danger text-white py-2"><h6 class="modal-title mb-0"><i class="bi bi-box-arrow-left"></i> ย้ายออก <span id="coRoomName"></span></h6><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="font-size: 0.9rem;"><form id="coForm" onsubmit="submitCheckOut(event)"><div class="mb-2"><label class="fw-bold">วันที่ย้ายออก</label><input type="date" class="form-control form-control-sm" id="coDate" required></div><div class="card p-2 bg-light mb-2"><div class="row"><div class="col-6"><label class="text-info" style="font-size:0.75rem;">น้ำก่อน: <span id="lblPrevW">0</span></label><input type="number" step="0.1" class="form-control form-control-sm border-info" id="coCurrWater" oninput="calcRefund()" required placeholder="เลขใหม่"></div><div class="col-6"><label class="text-warning" style="font-size:0.75rem;">ไฟก่อน: <span id="lblPrevE">0</span></label><input type="number" step="0.1" class="form-control form-control-sm border-warning" id="coCurrElec" oninput="calcRefund()" required placeholder="เลขใหม่"></div></div></div><div class="row mb-2"><div class="col-6"><label class="fw-bold text-secondary">ทำความสะอาด</label><input type="number" class="form-control form-control-sm" id="coCleaning" value="300" oninput="calcRefund()"></div><div class="col-6"><label class="fw-bold text-success">เงินประกัน</label><input type="number" class="form-control form-control-sm" id="coDeposit" readonly></div></div><div class="p-2 bg-white border border-danger rounded mb-3 text-center"><label class="fw-bold text-danger mb-0" style="font-size:0.8rem;">ยอดคืนผู้เช่าสุทธิ (บาท)</label><input type="number" class="form-control text-center fw-bold text-danger border-0 bg-transparent p-0" id="coRefund" readonly value="0" style="font-size: 1.5rem;"></div><input type="hidden" id="coPhase"> <input type="hidden" id="coRoom"><input type="hidden" id="coPrevWaterRaw"> <input type="hidden" id="coPrevElecRaw"><button type="submit" class="btn btn-danger btn-sm w-100 fw-bold" id="btnCheckOut">ยืนยันการย้ายออก</button><div id="coStatus" class="mt-2 text-center fw-bold small"></div></form></div></div></div></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    renderLayout('menu-manage', 'จัดการผู้เช่า/ย้ายเข้าออก');
+    let rawRoomData = []; let modalCI = null; let modalCO = null;
+
+    async function initManageRooms() {
+      document.getElementById('ciDate').valueAsDate = new Date(); document.getElementById('coDate').valueAsDate = new Date();
+      try {
+        let data = await apiCall('getManageRoomsData');
+        rawRoomData = data; let tbody = document.getElementById('roomTableBody'); tbody.innerHTML = '';
+        data.forEach((row, idx) => {
+          let phase = String(row[0]||""); let room = String(row[1]||""); let tenant = String(row[2]||"").trim(); let rent = row[3]; let status = String(row[6]||"").trim();
+          let isVacant = (status === "ว่าง" || status === "" || tenant === "" || tenant === "-");
+          let badge = isVacant ? `<span class="badge bg-danger rounded-pill px-2" style="font-size:0.7rem;">ว่าง</span>` : `<span class="badge bg-success rounded-pill px-2" style="font-size:0.7rem;">มีคนเช่า</span>`;
+          let tName = isVacant ? `<span class="text-muted fst-italic" style="font-size:0.75rem;">-</span>` : `<div class="text-truncate text-dark" style="max-width: 80px; margin:auto;">${tenant}</div>`;
+          let actionBtn = isVacant ? `<button class="btn btn-outline-success" onclick="openCheckIn(${idx})"><i class="bi bi-box-arrow-in-right"></i></button>` : `<button class="btn btn-outline-danger" onclick="openCheckOut(${idx})"><i class="bi bi-box-arrow-left"></i></button>`;
+          tbody.innerHTML += `<tr><td class="fw-bold bg-light">${phase.replace("เฟส ","")}-${room}</td><td>${badge}</td><td>${tName}</td><td>${parseFloat(rent||0).toLocaleString()}</td><td>${actionBtn}</td></tr>`;
+        });
+        document.getElementById('loadingRoomMsg').classList.add('d-none'); document.getElementById('roomTableSection').classList.remove('d-none');
+      } catch(err) { document.getElementById('loadingRoomMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3 small">❌ Error: ${err.message}</div>`; }
+    }
+
+    function openCheckIn(idx) {
+      if(!modalCI) modalCI = new bootstrap.Modal(document.getElementById('checkInModal'));
+      let r = rawRoomData[idx];
+      document.getElementById('ciPhase').value = r[0]; document.getElementById('ciRoom').value = r[1]; document.getElementById('ciRoomName').innerText = `(${r[0]}-${r[1]})`;
+      document.getElementById('ciTenant').value = ""; document.getElementById('ciDeposit').value = "5000"; document.getElementById('ciRent').value = r[3]; document.getElementById('ciWater').value = r[4]; document.getElementById('ciElec').value = r[5]; document.getElementById('ciStatus').innerText = "";
+      modalCI.show();
+    }
+
+    function openCheckOut(idx) {
+      if(!modalCO) modalCO = new bootstrap.Modal(document.getElementById('checkOutModal'));
+      let r = rawRoomData[idx];
+      document.getElementById('coPhase').value = r[0]; document.getElementById('coRoom').value = r[1]; document.getElementById('coRoomName').innerText = `(${r[0]}-${r[1]})`;
+      document.getElementById('lblPrevW').innerText = r[4]||0; document.getElementById('coPrevWaterRaw').value = r[4]||0;
+      document.getElementById('lblPrevE').innerText = r[5]||0; document.getElementById('coPrevElecRaw').value = r[5]||0;
+      document.getElementById('coCurrWater').value = ""; document.getElementById('coCurrElec').value = ""; document.getElementById('coDeposit').value = r[7]||0; document.getElementById('coCleaning').value = 300; document.getElementById('coStatus').innerText = "";
+      calcRefund(); modalCO.show();
+    }
+
+    function calcRefund() {
+      let dep = parseFloat(document.getElementById('coDeposit').value)||0; let clean = parseFloat(document.getElementById('coCleaning').value)||0;
+      let pW = parseFloat(document.getElementById('coPrevWaterRaw').value)||0; let cW = parseFloat(document.getElementById('coCurrWater').value)||pW;
+      let pE = parseFloat(document.getElementById('coPrevElecRaw').value)||0; let cE = parseFloat(document.getElementById('coCurrElec').value)||pE;
+      document.getElementById('coRefund').value = dep - (Math.ceil(Math.max(0, cW-pW)*25)) - (Math.ceil(Math.max(0, cE-pE)*7)) - clean;
+    }
+
+    async function submitCheckIn(e) {
+      e.preventDefault(); document.getElementById('btnCheckIn').disabled = true; document.getElementById('ciStatus').className = "mt-2 text-primary"; document.getElementById('ciStatus').innerText = "กำลังบันทึก...";
+      let payload = { date: document.getElementById('ciDate').value, phase: document.getElementById('ciPhase').value, room: document.getElementById('ciRoom').value, tenant: document.getElementById('ciTenant').value, deposit: document.getElementById('ciDeposit').value, rent: document.getElementById('ciRent').value, water: document.getElementById('ciWater').value, elec: document.getElementById('ciElec').value };
+      try {
+        let res = await apiCall('processCheckIn', 'POST', payload);
+        if(res.success){ document.getElementById('ciStatus').className="mt-2 text-success"; document.getElementById('ciStatus').innerText="✅ สำเร็จ"; setTimeout(()=>{modalCI.hide(); document.getElementById('btnCheckIn').disabled=false; initManageRooms();}, 1500); }
+        else throw new Error(res.message);
+      } catch(err) { document.getElementById('ciStatus').className="mt-2 text-danger"; document.getElementById('ciStatus').innerText="❌ "+err.message; document.getElementById('btnCheckIn').disabled=false; }
+    }
+
+    async function submitCheckOut(e) {
+      e.preventDefault(); document.getElementById('btnCheckOut').disabled = true; document.getElementById('coStatus').className = "mt-2 text-primary"; document.getElementById('coStatus').innerText = "ประมวลผล...";
+      let payload = { date: document.getElementById('coDate').value, phase: document.getElementById('coPhase').value, room: document.getElementById('coRoom').value, water: document.getElementById('coCurrWater').value, elec: document.getElementById('coCurrElec').value, cleaning: document.getElementById('coCleaning').value, refund: document.getElementById('coRefund').value };
+      try {
+        let res = await apiCall('processCheckOut', 'POST', payload);
+        if(res.success){ document.getElementById('coStatus').className="mt-2 text-success"; document.getElementById('coStatus').innerText="✅ สำเร็จ"; setTimeout(()=>{modalCO.hide(); document.getElementById('btnCheckOut').disabled=false; initManageRooms();}, 1500); }
+        else throw new Error(res.message);
+      } catch(err) { document.getElementById('coStatus').className="mt-2 text-danger"; document.getElementById('coStatus').innerText="❌ "+err.message; document.getElementById('btnCheckOut').disabled=false; }
+    }
+    
+    initManageRooms();
+  </script>
+</body>
+</html>
