@@ -9,15 +9,19 @@
   <link rel="stylesheet" href="css/style.css">
   <style>
     /* สไตล์ Grid Card สำหรับห้อง */
-    .room-card { border-radius: 15px; overflow: hidden; transition: transform 0.2s; border: none; }
-    .room-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
-    .room-header { padding: 10px; color: white; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-    .room-header h3 { margin: 0; font-weight: 800; font-size: 1.8rem; letter-spacing: 1px; }
-    .bg-vacant { background: linear-gradient(135deg, #e74a3b, #c0392b); }
-    .bg-occupied { background: linear-gradient(135deg, #1cc88a, #13855c); }
+    .room-card { border-radius: 12px; overflow: hidden; transition: transform 0.2s; border: 1px solid #e0e6ed; background: #fff; }
+    .room-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; border-color: #b0bec5; }
+    
+    /* สไตล์สีตามชั้น (Floor Colors) */
+    .room-header { padding: 10px; text-align: center; border-bottom: 2px solid rgba(0,0,0,0.05); }
+    .room-header h4 { margin: 0; font-weight: 800; font-size: 1.5rem; letter-spacing: 1px; }
+    
+    .bg-floor-pink { background-color: #f8bbd0; color: #1a2a6c; } /* สีชมพู */
+    .bg-floor-gray { background-color: #e0e0e0; color: #1a2a6c; } /* สีเทา */
+    .bg-floor-white { background-color: #ffffff; color: #1a2a6c; } /* สีขาว */
     
     /* สไตล์ปุ่ม Filter เฟส */
-    .btn-filter { border-radius: 20px; padding: 5px 20px; font-weight: bold; border: 2px solid #1a2a6c; color: #1a2a6c; background: transparent; transition: 0.3s; margin-right: 10px; margin-bottom: 10px; }
+    .btn-filter { border-radius: 20px; padding: 6px 20px; font-weight: bold; border: 2px solid #1a2a6c; color: #1a2a6c; background: transparent; transition: 0.3s; margin-right: 8px; margin-bottom: 10px; }
     .btn-filter.active, .btn-filter:hover { background: #1a2a6c; color: white; }
 
     /* สไตล์ตารางด้านล่าง */
@@ -31,21 +35,20 @@
     <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
     
     <div class="main-content">
-      <div id="loadingRoomMsg" class="text-center text-primary my-5"><div class="spinner-border" style="width: 3rem; height: 3rem;"></div><h5 class="mt-3">กำลังโหลดข้อมูลห้อง...</h5></div>
+      <div id="loadingRoomMsg" class="text-center text-primary my-5"><div class="spinner-border" style="width: 3rem; height: 3rem;"></div><h5 class="mt-3">กำลังโหลดผังห้องพัก...</h5></div>
       
       <div id="contentSection" class="d-none">
         <div class="mb-4 text-center text-md-start" id="phaseFilterArea">
-          <button class="btn-filter active" onclick="filterPhase('all', this)">ทุกเฟส</button>
-          <button class="btn-filter" onclick="filterPhase('เฟส 1', this)">เฟส 1</button>
-          <button class="btn-filter" onclick="filterPhase('เฟส 2', this)">เฟส 2</button>
+          <button class="btn-filter active" onclick="filterPhase('all', this)"><i class="bi bi-buildings-fill"></i> ดูทั้งหมด</button>
+          <button class="btn-filter" onclick="filterPhase('เฟส 1', this)">เฟส 1 (2 ชั้น)</button>
+          <button class="btn-filter" onclick="filterPhase('เฟส 2', this)">เฟส 2 (3 ชั้น)</button>
         </div>
 
-        <h5 class="fw-bold text-secondary mb-3"><i class="bi bi-grid-fill"></i> แผงผังห้องพัก</h5>
-        <div class="row g-3 mb-5" id="roomGridArea"></div>
+        <div id="roomGridArea"></div>
 
-        <hr class="mb-4">
+        <hr class="my-5 border-2">
 
-        <h5 class="fw-bold text-secondary mb-3"><i class="bi bi-table"></i> ตารางสรุปข้อมูล</h5>
+        <h5 class="fw-bold text-secondary mb-3"><i class="bi bi-table"></i> ตารางสรุปข้อมูลผู้เช่า</h5>
         <div class="container-fluid bg-white p-2 p-md-4 rounded shadow-sm">
           <div class="table-responsive" style="max-height: 50vh; overflow-y: auto;">
             <table class="table table-hover table-bordered align-middle text-center table-compact" style="width: 100%;">
@@ -70,62 +73,95 @@
     renderLayout('menu-manage', 'จัดการผู้เช่า');
     let rawRoomData = []; let modalCI = null; let modalCO = null; let modalEdit = null;
 
+    // ล็อกผังห้อง (Layout Mapping)
+    const buildingLayout = {
+      "เฟส 1": [
+        { floorName: "ชั้น 2", colorClass: "bg-floor-pink", rooms: ["4", "5", "6", "7"] },
+        { floorName: "ชั้น 1", colorClass: "bg-floor-gray", rooms: ["3", "2", "1", "8"] }
+      ],
+      "เฟส 2": [
+        { floorName: "ชั้น 3", colorClass: "bg-floor-white", rooms: ["C1", "C2", "C3", "C4", "C5"] },
+        { floorName: "ชั้น 2", colorClass: "bg-floor-gray", rooms: ["B1", "B2", "B3", "B4", "B5"] },
+        { floorName: "ชั้น 1", colorClass: "bg-floor-white", rooms: ["A1", "A2", "A3", "A4", "A5"] }
+      ]
+    };
+
     async function initManageRooms() {
       document.getElementById('ciDate').valueAsDate = new Date(); document.getElementById('coDate').valueAsDate = new Date();
       try {
         let data = await apiCall('getManageRoomsData');
         rawRoomData = data; 
-        renderData('all'); // วาดจอทั้งหมด (Grid + Table)
+        renderData('all'); 
         document.getElementById('loadingRoomMsg').classList.add('d-none'); document.getElementById('contentSection').classList.remove('d-none');
       } catch(err) { document.getElementById('loadingRoomMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3">❌ Error: ${err.message}</div>`; }
     }
 
-    // ฟังก์ชันวาดหน้าจอ (รองรับการ Filter เฟส)
+    // ฟังก์ชันค้นหาข้อมูลห้องจาก Database
+    function getRoomDataObj(targetPhase, targetRoom) {
+      for (let i = 0; i < rawRoomData.length; i++) {
+        let dbPhase = String(rawRoomData[i][0] || "").replace("เฟส ", "").replace("เฟส", "").trim();
+        let queryPhase = targetPhase.replace("เฟส ", "").replace("เฟส", "").trim();
+        if (dbPhase === queryPhase && String(rawRoomData[i][1]) === targetRoom) return { data: rawRoomData[i], index: i };
+      }
+      return null;
+    }
+
+    // ฟังก์ชันวาดหน้าจอทั้งหมด
     function renderData(filterPhaseName) {
-      let gridArea = document.getElementById('roomGridArea');
-      let tbody = document.getElementById('roomTableBody');
+      let gridArea = document.getElementById('roomGridArea'); let tbody = document.getElementById('roomTableBody');
       gridArea.innerHTML = ''; tbody.innerHTML = '';
 
-      rawRoomData.forEach((row, idx) => {
-        let phase = String(row[0]||"").trim(); let room = String(row[1]||""); 
-        let tenant = String(row[2]||"").trim(); let rent = row[3]; let status = String(row[6]||"").trim();
+      // 1. วาด Grid ตามผังที่ล็อกไว้
+      Object.keys(buildingLayout).forEach(phaseKey => {
+        if (filterPhaseName !== 'all' && filterPhaseName !== phaseKey) return; // กรองเฟส
+
+        let html = `<div class="mb-4"><h5 class="fw-bold text-primary mb-3"><i class="bi bi-building"></i> อาคาร ${phaseKey}</h5>`;
         
-        // ข้ามถ้าไม่ตรง Filter
-        if(filterPhaseName !== 'all' && phase !== filterPhaseName) return;
+        buildingLayout[phaseKey].forEach(floor => {
+          html += `<div class="fw-bold text-secondary small mb-2"><i class="bi bi-layers"></i> ${floor.floorName}</div>`;
+          html += `<div class="row g-2 mb-3">`; // สร้างแถวใหม่สำหรับแต่ละชั้น
+          
+          floor.rooms.forEach(roomNo => {
+             let rData = getRoomDataObj(phaseKey, roomNo);
+             if (!rData) return; // ข้ามถ้าห้องไม่มีในชีต
 
-        let isVacant = (status === "ว่าง" || status === "" || tenant === "" || tenant === "-");
-        
-        // --- 1. วาด Grid Card ---
-        let cardColor = isVacant ? "vacant" : "occupied";
-        let cardIcon = isVacant ? "door-open" : "door-closed";
-        let tNameGrid = isVacant ? `<span class="badge bg-danger mb-1">ว่าง</span><br><small class="text-muted">-</small>` : `<span class="badge bg-success mb-1">มีผู้เช่า</span><br><div class="fw-bold text-truncate text-dark" title="${tenant}">${tenant}</div>`;
-        let gridAction = isVacant 
-          ? `<button class="btn btn-sm btn-outline-success w-100 fw-bold" onclick="openCheckIn(${idx})"><i class="bi bi-box-arrow-in-right"></i> ย้ายเข้า</button>`
-          : `<div class="d-flex gap-1 w-100"><button class="btn btn-sm btn-outline-warning w-50" onclick="openEditName(${idx})" title="แก้ชื่อ"><i class="bi bi-pencil-square"></i></button><button class="btn btn-sm btn-outline-danger w-50" onclick="openCheckOut(${idx})" title="ย้ายออก"><i class="bi bi-box-arrow-left"></i></button></div>`;
+             let row = rData.data; let idx = rData.index;
+             let tenant = String(row[2]||"").trim(); let rent = row[3]; let status = String(row[6]||"").trim();
+             let isVacant = (status === "ว่าง" || status === "" || tenant === "" || tenant === "-");
+             
+             // ตั้งค่า UI สำหรับ Grid
+             let cardIcon = isVacant ? "door-open text-danger" : "door-closed text-success";
+             let tNameGrid = isVacant ? `<span class="badge bg-danger mb-2">ห้องว่าง</span><br><small class="text-muted" style="font-size:0.75rem;">พร้อมให้เช่า</small>` : `<span class="badge bg-success mb-2">มีผู้เช่า</span><br><div class="fw-bold text-truncate text-dark" style="font-size:0.85rem;" title="${tenant}">${tenant}</div>`;
+             let gridAction = isVacant 
+                ? `<button class="btn btn-sm btn-outline-success w-100 fw-bold mt-2" onclick="openCheckIn(${idx})"><i class="bi bi-box-arrow-in-right"></i> ย้ายเข้า</button>`
+                : `<div class="d-flex gap-1 w-100 mt-2"><button class="btn btn-sm btn-outline-warning w-50" onclick="openEditName(${idx})" title="แก้ชื่อ"><i class="bi bi-pencil-square"></i></button><button class="btn btn-sm btn-outline-danger w-50" onclick="openCheckOut(${idx})" title="ย้ายออก"><i class="bi bi-box-arrow-left"></i></button></div>`;
 
-        gridArea.innerHTML += `
-          <div class="col-6 col-md-4 col-xl-3">
-            <div class="card room-card h-100 shadow-sm bg-white border border-light">
-              <div class="room-header bg-${cardColor}">
-                <small class="mb-1" style="font-size:0.75rem; opacity:0.9;">${phase}</small>
-                <h3><i class="bi bi-${cardIcon} me-2"></i>${room}</h3>
-              </div>
-              <div class="card-body text-center d-flex flex-column justify-content-between p-3">
-                <div class="mb-3">${tNameGrid}</div>
-                ${gridAction}
-              </div>
-            </div>
-          </div>
-        `;
+             html += `
+             <div class="col-6 col-md" style="min-width: 130px;">
+                <div class="card room-card h-100 shadow-sm">
+                  <div class="room-header ${floor.colorClass}">
+                    <h4><i class="bi bi-${cardIcon} me-1" style="font-size:1.1rem;"></i>${roomNo}</h4>
+                  </div>
+                  <div class="card-body text-center d-flex flex-column justify-content-between p-2">
+                    <div>${tNameGrid}</div>
+                    ${gridAction}
+                  </div>
+                </div>
+             </div>`;
 
-        // --- 2. วาดตารางด้านล่าง (เหมือนเดิม) ---
-        let badge = isVacant ? `<span class="badge bg-danger rounded-pill px-2" style="font-size:0.7rem;">ว่าง</span>` : `<span class="badge bg-success rounded-pill px-2" style="font-size:0.7rem;">มีคนเช่า</span>`;
-        let tNameTable = isVacant ? `<span class="text-muted fst-italic" style="font-size:0.75rem;">-</span>` : `<div class="text-truncate text-dark fw-bold" style="max-width: 100px; margin:auto;">${tenant}</div>`;
-        let tableAction = isVacant 
-          ? `<button class="btn btn-outline-success btn-sm" onclick="openCheckIn(${idx})"><i class="bi bi-box-arrow-in-right"></i></button>` 
-          : `<button class="btn btn-outline-warning btn-sm me-1" onclick="openEditName(${idx})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-sm" onclick="openCheckOut(${idx})"><i class="bi bi-box-arrow-left"></i></button>`;
+             // ตั้งค่า UI สำหรับ Table ด้านล่าง (เรียงลำดับตาม Grid เป๊ะๆ)
+             let badgeTbl = isVacant ? `<span class="badge bg-danger rounded-pill px-2" style="font-size:0.7rem;">ว่าง</span>` : `<span class="badge bg-success rounded-pill px-2" style="font-size:0.7rem;">มีคนเช่า</span>`;
+             let tNameTbl = isVacant ? `<span class="text-muted fst-italic" style="font-size:0.75rem;">-</span>` : `<div class="text-truncate text-dark fw-bold" style="max-width: 100px; margin:auto;">${tenant}</div>`;
+             let actionTbl = isVacant 
+               ? `<button class="btn btn-outline-success btn-sm" onclick="openCheckIn(${idx})"><i class="bi bi-box-arrow-in-right"></i></button>` 
+               : `<button class="btn btn-outline-warning btn-sm me-1" onclick="openEditName(${idx})"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-danger btn-sm" onclick="openCheckOut(${idx})"><i class="bi bi-box-arrow-left"></i></button>`;
 
-        tbody.innerHTML += `<tr><td class="fw-bold bg-light">${phase.replace("เฟส ","")}-${room}</td><td>${badge}</td><td>${tNameTable}</td><td>${parseFloat(rent||0).toLocaleString()}</td><td class="text-nowrap">${tableAction}</td></tr>`;
+             tbody.innerHTML += `<tr><td class="fw-bold bg-light">${phaseKey.replace("เฟส ","")}-${roomNo}</td><td>${badgeTbl}</td><td>${tNameTbl}</td><td>${parseFloat(rent||0).toLocaleString()}</td><td class="text-nowrap">${actionTbl}</td></tr>`;
+          });
+          html += `</div>`;
+        });
+        html += `</div>`;
+        gridArea.innerHTML += html;
       });
     }
 
@@ -136,7 +172,7 @@
       renderData(phase);
     }
 
-    // เปิด Modal แก้ไขชื่อ
+    // Modal แก้ไขชื่อ
     function openEditName(idx) {
       if(!modalEdit) modalEdit = new bootstrap.Modal(document.getElementById('editNameModal'));
       let r = rawRoomData[idx];
@@ -146,7 +182,6 @@
       modalEdit.show();
     }
 
-    // บันทึกการแก้ไขชื่อ
     async function submitEditName(e) {
       e.preventDefault(); document.getElementById('btnEditName').disabled = true; document.getElementById('editStatus').className = "mt-2 text-primary"; document.getElementById('editStatus').innerText = "กำลังบันทึก...";
       let payload = { phase: document.getElementById('editPhase').value, room: document.getElementById('editRoom').value, newTenantName: document.getElementById('editTenantName').value };
@@ -157,7 +192,7 @@
       } catch(err) { document.getElementById('editStatus').className="mt-2 text-danger"; document.getElementById('editStatus').innerText="❌ "+err.message; document.getElementById('btnEditName').disabled=false; }
     }
 
-    // (ฟังก์ชัน openCheckIn, openCheckOut, calcRefund, submitCheckIn, submitCheckOut คงเดิม เหมือนเวอร์ชันก่อนหน้านี้)
+    // (ฟังก์ชัน openCheckIn, openCheckOut, calcRefund, submitCheckIn, submitCheckOut คงเดิม)
     function openCheckIn(idx) { if(!modalCI) modalCI = new bootstrap.Modal(document.getElementById('checkInModal')); let r = rawRoomData[idx]; document.getElementById('ciPhase').value = r[0]; document.getElementById('ciRoom').value = r[1]; document.getElementById('ciRoomName').innerText = `(${r[0]}-${r[1]})`; document.getElementById('ciTenant').value = ""; document.getElementById('ciDeposit').value = "5000"; document.getElementById('ciRent').value = r[3]; document.getElementById('ciWater').value = r[4]; document.getElementById('ciElec').value = r[5]; document.getElementById('ciStatus').innerText = ""; modalCI.show(); }
     function openCheckOut(idx) { if(!modalCO) modalCO = new bootstrap.Modal(document.getElementById('checkOutModal')); let r = rawRoomData[idx]; document.getElementById('coPhase').value = r[0]; document.getElementById('coRoom').value = r[1]; document.getElementById('coRoomName').innerText = `(${r[0]}-${r[1]})`; document.getElementById('lblPrevW').innerText = r[4]||0; document.getElementById('coPrevWaterRaw').value = r[4]||0; document.getElementById('lblPrevE').innerText = r[5]||0; document.getElementById('coPrevElecRaw').value = r[5]||0; document.getElementById('coCurrWater').value = ""; document.getElementById('coCurrElec').value = ""; document.getElementById('coDeposit').value = r[7]||0; document.getElementById('coCleaning').value = 300; document.getElementById('coStatus').innerText = ""; calcRefund(); modalCO.show(); }
     function calcRefund() { let dep = parseFloat(document.getElementById('coDeposit').value)||0; let clean = parseFloat(document.getElementById('coCleaning').value)||0; let pW = parseFloat(document.getElementById('coPrevWaterRaw').value)||0; let cW = parseFloat(document.getElementById('coCurrWater').value)||pW; let pE = parseFloat(document.getElementById('coPrevElecRaw').value)||0; let cE = parseFloat(document.getElementById('coCurrElec').value)||pE; document.getElementById('coRefund').value = dep - (Math.ceil(Math.max(0, cW-pW)*25)) - (Math.ceil(Math.max(0, cE-pE)*7)) - clean; }
