@@ -3,49 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>บันทึกมิเตอร์</title>
+  <title>บันทึกมิเตอร์ - นภาดาวอพาร์ตเมนต์</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .table-meter th, .table-meter td { padding: 0.4rem 0.2rem; font-size: 0.85rem; vertical-align: middle; }
+    .table-meter th { position: sticky; top: 0; z-index: 1; border-bottom: 2px solid #dee2e6; line-height: 1.2; }
+    .water-theme th { background-color: #e0f7fa; color: #00838f; } .elec-theme th { background-color: #fff3e0; color: #e65100; }
+    .input-highlight { font-weight: bold; text-align: center; }
+    .table-meter .form-control-sm { padding: 0.2rem 0.4rem; font-size: 0.8rem; text-align: center; }
+    @media (max-width: 768px) { .table-meter th, .table-meter td { font-size: 0.75rem; } h5#meterTitle { font-size: 1.1rem; } }
+  </style>
 </head>
 <body>
   <div id="layout-sidebar"></div>
   <div class="main-wrapper">
-    <div class="topbar">
-      <div class="d-flex align-items-center">
-        <button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-        <h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4>
+    <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
+    <div class="main-content">
+      <div class="container-fluid bg-white p-2 p-md-4 rounded shadow-sm">
+        <div class="row mb-2 bg-light p-2 rounded mx-0">
+          <div class="col-6 pe-1"><label class="fw-bold small mb-1">เดือน</label><select class="form-select form-select-sm" id="selMonth" onchange="loadMeterData()"><option value="มกราคม">มกราคม</option><option value="กุมภาพันธ์">กุมภาพันธ์</option><option value="มีนาคม" selected>มีนาคม</option><option value="เมษายน">เมษายน</option><option value="พฤษภาคม">พฤษภาคม</option><option value="มิถุนายน">มิถุนายน</option><option value="กรกฎาคม">กรกฎาคม</option><option value="สิงหาคม">สิงหาคม</option><option value="กันยายน">กันยายน</option><option value="ตุลาคม">ตุลาคม</option><option value="พฤศจิกายน">พฤศจิกายน</option><option value="ธันวาคม">ธันวาคม</option></select></div>
+          <div class="col-6 ps-1"><label class="fw-bold small mb-1">ปี</label><select class="form-select form-select-sm" id="selYear" onchange="loadMeterData()"><option value="2568">2568</option><option value="2569" selected>2569</option><option value="2570">2570</option></select></div>
+        </div>
+        <div id="loadingMeterMsg" class="text-center my-4"><div class="spinner-border text-primary spinner-border-sm"></div><br><span class="mt-2 d-block small">ดึงข้อมูล...</span></div>
+        <div class="table-responsive d-none" id="tableSection" style="max-height: 65vh; overflow-y: auto;">
+          <table class="table table-hover table-bordered mb-0 table-meter text-center align-middle" style="width: 100%;" id="meterTable">
+            <thead id="meterThead"><tr><th style="width: 25%;">ห้องพัก<br><small class="fw-normal">ผู้เช่า</small></th><th style="width: 20%;">ค่าเช่า<br><small class="fw-normal">(บาท)</small></th><th style="width: 25%;">เลขมิเตอร์<br><small class="fw-normal">ก่อน ➔ ใหม่</small></th><th style="width: 30%;">ค่าอื่นๆ<br><small class="fw-normal">+ หมายเหตุ</small></th></tr></thead>
+            <tbody id="meterTableBody"></tbody>
+          </table>
+        </div>
+        <div id="statusMsg" class="text-center fw-bold mt-2 mb-2 small"></div>
+        <button type="button" class="btn btn-sm w-100 fw-bold d-none text-white py-2" id="saveBtn" onclick="saveMeters()"></button>
       </div>
     </div>
-    <div class="main-content">
-       </div>
   </div>
 
   <script src="js/app.js"></script>
   <script>
-    // เช็ค URL Parameter ว่าเป็น น้ำ หรือ ไฟ
     const urlParams = new URLSearchParams(window.location.search);
-    const meterType = urlParams.get('type'); // ได้ 'water' หรือ 'elec'
+    const meterType = urlParams.get('type') || 'water';
+    let isWater = (meterType === 'water');
     
-    if(meterType === 'water') {
-      renderLayout('menu-water', 'บันทึกมิเตอร์น้ำ');
-    } else {
-      renderLayout('menu-elec', 'บันทึกมิเตอร์ไฟ');
+    renderLayout(isWater ? 'menu-water' : 'menu-elec', isWater ? 'บันทึกมิเตอร์น้ำ' : 'บันทึกมิเตอร์ไฟ');
+    document.getElementById('meterThead').className = isWater ? "water-theme" : "elec-theme";
+    document.getElementById('saveBtn').className = isWater ? "btn btn-info w-100 d-none text-white py-2 fw-bold" : "btn btn-warning w-100 d-none text-dark py-2 fw-bold";
+    document.getElementById('saveBtn').innerHTML = `<i class="bi bi-floppy"></i> บันทึกมิเตอร์${isWater ? 'น้ำ' : 'ไฟ'}`;
+
+    async function loadMeterData() {
+      document.getElementById('loadingMeterMsg').classList.remove('d-none'); document.getElementById('tableSection').classList.add('d-none'); document.getElementById('saveBtn').classList.add('d-none'); document.getElementById('statusMsg').innerText = "";
+      let billMonth = document.getElementById('selMonth').value + " " + document.getElementById('selYear').value;
+      try {
+        let data = await apiCall('getMeterDataForMonth', 'GET', { billMonth: billMonth });
+        let tbody = document.getElementById('meterTableBody'); tbody.innerHTML = '';
+        data.forEach(row => {
+          let prevMeter = isWater ? row.prevW : row.prevE; let currMeter = isWater ? row.currW : row.currE;
+          let tenantDisplay = row.tenant ? row.tenant : `<span class="text-danger small">ว่าง</span>`;
+          tbody.innerHTML += `<tr><td class="bg-light"><div class="fw-bold">${String(row.phase).replace("เฟส ","")}-${row.room}</div><div class="text-truncate text-muted mt-1" style="max-width:80px; font-size:0.7rem; margin:auto;">${tenantDisplay}</div><input type="hidden" class="hidden-phase" value="${row.phase}"><input type="hidden" class="hidden-room" value="${row.room}"></td><td><input type="number" class="form-control form-control-sm text-center curr-rent" value="${row.rent}"></td><td><div class="text-muted mb-1" style="font-size: 0.7rem;">ก่อน: ${prevMeter||0}</div><input type="number" step="0.1" class="form-control form-control-sm input-highlight curr-meter" value="${currMeter}" placeholder="เลขใหม่"></td><td><input type="number" class="form-control form-control-sm other-amt mb-1" value="${row.otherAmt}" placeholder="ค่าอื่น (฿)"><input type="text" class="form-control form-control-sm remark-input" value="${row.remark}" placeholder="หมายเหตุ"></td></tr>`;
+        });
+        document.getElementById('loadingMeterMsg').classList.add('d-none'); document.getElementById('tableSection').classList.remove('d-none'); document.getElementById('saveBtn').classList.remove('d-none');
+      } catch(err) { document.getElementById('loadingMeterMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3 small">❌ Error: ${err.message}</div>`; }
     }
 
-    // ตัวอย่างการดึงข้อมูลและบันทึกข้อมูล
-    async function loadMeters(billMonth) {
-      let data = await apiCall('getMeterDataForMonth', 'GET', { billMonth: billMonth });
-      // ... วาดตาราง
+    async function saveMeters() {
+      let billMonth = document.getElementById('selMonth').value + " " + document.getElementById('selYear').value;
+      let batchData = [];
+      let phases = document.querySelectorAll('.hidden-phase'); let rooms = document.querySelectorAll('.hidden-room');
+      let meters = document.querySelectorAll('.curr-meter'); let rents = document.querySelectorAll('.curr-rent');
+      let others = document.querySelectorAll('.other-amt'); let remarks = document.querySelectorAll('.remark-input');
+      for(let i=0; i<meters.length; i++) {
+        if (meters[i].value !== "" || others[i].value !== "") { batchData.push({ phase: phases[i].value, room: rooms[i].value, currMeter: meters[i].value, actualRent: rents[i].value, otherAmt: others[i].value, remark: remarks[i].value }); }
+      }
+      if(batchData.length === 0) return alert("⚠️ กรุณากรอกข้อมูลอย่างน้อย 1 ห้อง");
+      document.getElementById('saveBtn').disabled = true; document.getElementById('statusMsg').className = "mt-2 text-primary"; document.getElementById('statusMsg').innerText = "กำลังอัปเดต...";
+      try {
+        let payload = { billMonth: billMonth, type: isWater?'WATER':'ELEC', batchData: batchData };
+        let res = await apiCall('saveMeterBatch', 'POST', payload);
+        if(res.success){ document.getElementById('statusMsg').className="mt-2 text-success"; document.getElementById('statusMsg').innerText="✅ "+res.message; setTimeout(()=>loadMeterData(), 1500); }
+        else throw new Error(res.message);
+      } catch(err) { document.getElementById('statusMsg').className="mt-2 text-danger"; document.getElementById('statusMsg').innerText="❌ "+err.message; document.getElementById('saveBtn').disabled = false; }
     }
-
-    async function saveMeters(batchData) {
-      // POST Request แบบใหม่ (รอรับ await ได้เลย)
-      let res = await apiCall('saveMeterBatch', 'POST', {
-        billMonth: "มีนาคม 2569", type: meterType.toUpperCase(), batchData: batchData
-      });
-      alert(res.message);
-    }
+    loadMeterData();
   </script>
 </body>
 </html>
