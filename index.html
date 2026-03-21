@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ - นภาดาวอพาร์ตเมนต์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    /* พื้นหลังไล่สีหรูหรา */
+    body { background: linear-gradient(135deg, #1a2a6c, #11998e); height: 100vh; display: flex; align-items: center; justify-content: center; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; overflow: hidden; }
+    
+    /* กล่อง Login */
+    .login-card { background: #ffffff; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); padding: 40px 30px; width: 90%; max-width: 450px; text-align: center; }
+    .logo-img { max-width: 160px; margin-bottom: 25px; }
+    
+    /* กล่องเลือกผู้ใช้งาน */
+    .profile-box { border: 2px solid #e0e6ed; border-radius: 15px; padding: 20px 10px; cursor: pointer; transition: 0.3s; background: #fff; }
+    .profile-box:hover { border-color: #11998e; background: #f8fbfd; transform: translateY(-3px); }
+    .profile-box.active { border-color: #1a2a6c; background: #e8f0fe; box-shadow: 0 5px 15px rgba(26, 42, 108, 0.15); }
+    .profile-icon { font-size: 3.5rem; color: #1a2a6c; margin-bottom: 10px; }
+    
+    /* ส่วนกรอกรหัสผ่าน (ซ่อนไว้ก่อน) */
+    .password-section { display: none; margin-top: 25px; animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .form-control-lg { border-radius: 12px; text-align: center; letter-spacing: 10px; font-size: 1.8rem; border: 2px solid #e0e6ed; }
+    .form-control-lg:focus { border-color: #1a2a6c; box-shadow: none; }
+    .btn-login { background: linear-gradient(90deg, #1a2a6c, #11998e); border: none; font-weight: bold; font-size: 1.1rem; padding: 12px; transition: 0.3s; }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4); }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <img src="images/logo.png" alt="Napadaw Logo" class="logo-img" onerror="this.src='https://via.placeholder.com/150?text=LOGO'">
+    
+    <h4 class="fw-bold mb-4" style="color: #1a2a6c;">เข้าสู่ระบบจัดการ</h4>
+    
+    <div class="row g-3" id="profileSelection">
+      <div class="col-6">
+        <div class="profile-box" onclick="selectProfile('พ่อมายู', this)">
+          <i class="bi bi-person-workspace profile-icon"></i>
+          <h6 class="fw-bold mb-0 text-dark">พ่อมายู</h6>
+        </div>
+      </div>
+      <div class="col-6">
+        <div class="profile-box" onclick="selectProfile('แม่มายู', this)">
+          <i class="bi bi-person-hearts profile-icon" style="color: #e74a3b;"></i>
+          <h6 class="fw-bold mb-0 text-dark">แม่มายู</h6>
+        </div>
+      </div>
+    </div>
+
+    <div class="password-section" id="passwordSection">
+      <h6 class="text-muted mb-3" style="font-size: 0.9rem;">ผู้ดูแลระบบ: <span id="selectedName" class="fw-bold text-dark fs-5"></span></h6>
+      <input type="password" class="form-control form-control-lg mb-4" id="pinInput" placeholder="••••" onkeypress="handleEnter(event)" maxlength="4" inputmode="numeric">
+      
+      <button class="btn btn-primary w-100 rounded-pill btn-login" onclick="login()">เข้าสู่ระบบ</button>
+      <button class="btn btn-link text-muted mt-3" style="font-size: 0.85rem; text-decoration: none;" onclick="resetSelection()"><i class="bi bi-arrow-left"></i> กลับไปเลือกผู้ใช้</button>
+    </div>
+  </div>
+
+  <script>
+    // ฐานข้อมูลรหัสผ่าน (เป็น String ตามที่ขอครับ)
+    const users = { "พ่อมายู": "1591", "แม่มายู": "0723" };
+    let currentUser = "";
+
+    function selectProfile(name, element) {
+      currentUser = name;
+      document.getElementById('selectedName').innerText = name;
+      document.getElementById('profileSelection').style.display = 'none';
+      document.getElementById('passwordSection').style.display = 'block';
+      document.getElementById('pinInput').value = '';
+      setTimeout(() => document.getElementById('pinInput').focus(), 100);
+    }
+
+    function resetSelection() {
+      currentUser = "";
+      document.getElementById('profileSelection').style.display = 'flex';
+      document.getElementById('passwordSection').style.display = 'none';
+    }
+
+    function handleEnter(e) {
+      if (e.key === 'Enter') login();
+    }
+
+    function login() {
+      const pin = document.getElementById('pinInput').value.trim();
+      if (users[currentUser] === pin) {
+        // บันทึกสถานะการล็อกอินลงในเครื่อง
+        localStorage.setItem("napadaw_admin", currentUser);
+        // เด้งไปหน้า Dashboard 
+        window.location.href = "dashboard.html";
+      } else {
+        alert("❌ รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่");
+        document.getElementById('pinInput').value = '';
+        document.getElementById('pinInput').focus();
+      }
+    }
+
+    // ระบบป้องกัน: ถ้าล็อกอินค้างไว้อยู่แล้ว ให้ข้ามหน้านี้ไป Dashboard เลย
+    if (localStorage.getItem("napadaw_admin")) {
+      window.location.href = "dashboard.html";
+    }
+  </script>
+</body>
+</html>
