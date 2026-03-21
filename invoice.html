@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ใบแจ้งยอด - นภาดาวอพาร์ตเมนต์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    .invoice-card { background: #fff; border: 1px solid #e0e6ed; border-radius: 12px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); margin-bottom: 10px; font-size: 0.85rem; }
+    .invoice-brand { font-size: 1.2rem; font-weight: bold; color: #1e90ff; text-align: center; margin-bottom: 2px; }
+    .invoice-subtitle { font-size: 0.8rem; color: #7f8c8d; text-align: center; margin-bottom: 12px; }
+    .invoice-header-info { display: flex; justify-content: space-around; background-color: #f8f9fa; border-radius: 8px; padding: 8px; margin-bottom: 12px; border: 1px solid #eee; font-size: 0.85rem; }
+    .flex-row-data { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #f0f0f0; }
+    .total-amount-row { font-size: 1.1rem; color: #ff4081; font-weight: bold; margin-top: 8px; padding-top: 8px; border-top: 2px solid #2c3e50; }
+    .payment-box { background-color: #f4f7f6; border: 1px dashed #bdc3c7; border-radius: 8px; padding: 10px; margin-top: 12px; text-align: center; font-size: 0.8rem; }
+    .control-panel { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
+    @media print { .control-panel, .btn-download, #layout-sidebar, .topbar { display: none !important; } .main-wrapper { width: 100% !important; } .invoice-card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; } .col-md-6 { width: 50%; float: left; padding: 0 10px; } }
+  </style>
+</head>
+<body>
+  <div id="layout-sidebar"></div>
+  <div class="main-wrapper">
+    <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
+    <div class="main-content">
+      <div class="control-panel">
+        <select class="form-select form-select-sm" id="filterMonthYear" onchange="applyCardFilter()" style="max-width: 140px;"></select>
+        <button class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer-fill"></i> พิมพ์</button>
+      </div>
+      <div id="loadingInvMsg" class="text-center text-primary my-4"><div class="spinner-border spinner-border-sm"></div></div>
+      <div class="row" id="invoiceCardArea"></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderLayout('menu-invoice', 'ใบแจ้งยอด');
+    var allInvoiceData = [];
+
+    async function initInvoiceCards() {
+      try {
+        let data = await apiCall('getAllInvoices');
+        allInvoiceData = data;
+        let monthsSet = new Set(); data.forEach(row => monthsSet.add(row[0]));
+        let monthSelect = document.getElementById('filterMonthYear'); monthSelect.innerHTML = '<option value="ทั้งหมด">- ทุกเดือน -</option>';
+        Array.from(monthsSet).forEach(m => monthSelect.innerHTML += `<option value="${m}" ${m==="มีนาคม 2569"?"selected":""}>${m}</option>`);
+        applyCardFilter();
+      } catch(err) { document.getElementById('loadingInvMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3 small">❌ Error: ${err.message}</div>`; }
+    }
+
+    function applyCardFilter() {
+      let selectedMonth = document.getElementById('filterMonthYear').value; let container = document.getElementById('invoiceCardArea'); container.innerHTML = ''; let matchCount = 0;
+      allInvoiceData.forEach((row, index) => {
+        let rowMonth = String(row[0]||"");
+        if (selectedMonth === "ทั้งหมด" || rowMonth === selectedMonth) {
+          matchCount++;
+          let room = String(row[2]||""); let rent = parseFloat(row[3])||0; let pWater = parseFloat(row[4])||0; let cWater = parseFloat(row[5])||0; let pElec = parseFloat(row[6])||0; let cElec = parseFloat(row[7])||0; let otherAmt = parseFloat(row[8])||0;
+          let wAmt = Math.ceil((cWater-pWater)*25); let eAmt = Math.ceil((cElec-pElec)*7); let total = parseFloat(row[9])||0;
+          let remark = row[10] ? `<div class="text-danger mt-1" style="font-size: 0.75rem;">* หมายเหตุ: ${row[10]}</div>` : "";
+          let displayPhase = String(row[1]||"").replace("เฟส ", "").replace("เฟส", "").trim();
+          let cardId = `card-img-${index}`; let safeFileName = `บิล_${room}_${rowMonth.replace(/\s+/g, "_")}`;
+          let tenantHTML = (String(row[12]) === "ว่าง" || !row[11]) ? `<span class="badge bg-danger rounded-pill px-3 py-1 mb-2"><i class="bi bi-person-x-fill"></i> ไม่มีผู้เช่า</span>` : `<div class="text-primary mb-2" style="font-size: 0.85rem;"><i class="bi bi-person-check-fill"></i> ผู้เช่า: <strong>${row[11]}</strong></div>`;
+          let otherHTML = otherAmt !== 0 ? `<div class="flex-row-data"><span class="item-label">ค่าใช้จ่ายอื่นๆ:</span> <strong>${otherAmt.toLocaleString()} บาท</strong></div>` : "";
+
+          container.innerHTML += `<div class="col-md-6 col-sm-12 mb-3"><div class="invoice-card" id="${cardId}"><div class="invoice-brand">นภาดาวอพาร์ตเมนต์</div><div class="invoice-subtitle">ประจำเดือน ${rowMonth}</div><div class="invoice-header-info"><div>เฟส: <strong>${displayPhase}</strong></div><div>ห้อง: <strong>${room}</strong></div></div><div class="text-center">${tenantHTML}</div><div class="flex-row-data"><span>ค่าเช่าห้องพัก:</span> <strong>${rent.toLocaleString()} บาท</strong></div><div class="flex-row-data"><div>ค่าน้ำประปา <span style="font-size:0.75rem; color:#95a5a6; display:block;">(${pWater} ถึง ${cWater} = ${(cWater-pWater).toFixed(1)} หน่วย)</span></div><strong>${wAmt.toLocaleString()} บาท</strong></div><div class="flex-row-data"><div>ค่าไฟฟ้า <span style="font-size:0.75rem; color:#95a5a6; display:block;">(${pElec} ถึง ${cElec} = ${(cElec-pElec).toFixed(1)} หน่วย)</span></div><strong>${eAmt.toLocaleString()} บาท</strong></div>${otherHTML}${remark}<div class="flex-row-data total-amount-row"><span>ยอดชำระสุทธิ:</span> <span>${total.toLocaleString()} บาท</span></div><div class="payment-box"><div class="fw-bold mb-1"><i class="bi bi-qr-code-scan"></i> ชำระเงินผ่าน PromptPay</div>โทรศัพท์: <strong>084-683-0483</strong><br>ชื่อบัญชี: <strong>น.ส.ชื่นนภา ชัชวาลย์</strong></div></div><button class="btn btn-outline-success btn-sm w-100 fw-bold btn-download" onclick="downloadAsImage('${cardId}', '${safeFileName}')"><i class="bi bi-download"></i> บันทึกรูปภาพ</button></div>`;
+        }
+      });
+      if(matchCount === 0) container.innerHTML = `<div class="col-12 text-center text-muted py-4 small">ไม่พบข้อมูลบิล</div>`;
+      document.getElementById('loadingInvMsg').classList.add('d-none');
+    }
+
+    function downloadAsImage(elementId, fileName) {
+      html2canvas(document.getElementById(elementId), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+        let link = document.createElement('a'); link.download = fileName + '.png'; link.href = canvas.toDataURL('image/png'); link.click();
+      });
+    }
+    initInvoiceCards();
+  </script>
+</body>
+</html>
