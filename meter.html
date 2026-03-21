@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บันทึกมิเตอร์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="layout-sidebar"></div>
+  <div class="main-wrapper">
+    <div class="topbar">
+      <div class="d-flex align-items-center">
+        <button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
+        <h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4>
+      </div>
+    </div>
+    <div class="main-content">
+       </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // เช็ค URL Parameter ว่าเป็น น้ำ หรือ ไฟ
+    const urlParams = new URLSearchParams(window.location.search);
+    const meterType = urlParams.get('type'); // ได้ 'water' หรือ 'elec'
+    
+    if(meterType === 'water') {
+      renderLayout('menu-water', 'บันทึกมิเตอร์น้ำ');
+    } else {
+      renderLayout('menu-elec', 'บันทึกมิเตอร์ไฟ');
+    }
+
+    // ตัวอย่างการดึงข้อมูลและบันทึกข้อมูล
+    async function loadMeters(billMonth) {
+      let data = await apiCall('getMeterDataForMonth', 'GET', { billMonth: billMonth });
+      // ... วาดตาราง
+    }
+
+    async function saveMeters(batchData) {
+      // POST Request แบบใหม่ (รอรับ await ได้เลย)
+      let res = await apiCall('saveMeterBatch', 'POST', {
+        billMonth: "มีนาคม 2569", type: meterType.toUpperCase(), batchData: batchData
+      });
+      alert(res.message);
+    }
+  </script>
+</body>
+</html>
