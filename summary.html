@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สรุปรายได้ - นภาดาวอพาร์ตเมนต์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .table-summary th, .table-summary td { padding: 0.5rem 0.2rem; vertical-align: middle; }
+    .table-summary th { position: sticky; top: 0; z-index: 1; }
+    @media (max-width: 768px) { .table-summary th, .table-summary td { font-size: 0.7rem; padding: 0.3rem 0.1rem; } .filter-box label { font-size: 0.8rem; } .filter-box .form-select, .filter-box .btn { font-size: 0.85rem; padding: 0.25rem 0.5rem; } }
+  </style>
+</head>
+<body>
+  <div id="layout-sidebar"></div>
+  <div class="main-wrapper">
+    <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
+    <div class="main-content">
+      <div class="container-fluid bg-white p-2 p-md-4 rounded shadow-sm">
+        <div class="row g-2 mb-3 bg-light p-2 rounded d-print-none filter-box">
+          <div class="col-6 col-md-3"><label class="fw-bold mb-1">เดือน</label><select class="form-select form-select-sm" id="sumMonth"><option value="ทั้งหมด">-- ทุกเดือน --</option><option value="มกราคม">ม.ค.</option><option value="มีนาคม" selected>มี.ค.</option></select></div>
+          <div class="col-6 col-md-3"><label class="fw-bold mb-1">ปี</label><select class="form-select form-select-sm" id="sumYear"><option value="ทั้งหมด">-- ทุกปี --</option><option value="2569" selected>2569</option></select></div>
+          <div class="col-12 col-md-3"><label class="fw-bold mb-1">เฟส</label><select class="form-select form-select-sm" id="sumPhase"><option value="ทั้งหมด">-- ทุกเฟส --</option><option value="เฟส 1">เฟส 1</option><option value="เฟส 2">เฟส 2</option></select></div>
+          <div class="col-12 col-md-3 d-flex align-items-end mt-2 mt-md-0"><button class="btn btn-success btn-sm w-100 fw-bold py-2" onclick="generateSummary()"><i class="bi bi-search"></i> ค้นหา</button></div>
+        </div>
+        <div id="loadingSumMsg" class="text-center text-success my-4 d-none"><div class="spinner-border spinner-border-sm"></div></div>
+        <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
+          <table class="table table-hover table-bordered text-center align-middle table-summary" style="width: 100%;">
+            <thead class="table-success"><tr><th style="width: 15%;">ด/ป</th><th style="width: 12%;">ห้อง</th><th style="width: 13%;">เช่า</th><th style="width: 12%;">น้ำ</th><th style="width: 12%;">ไฟ</th><th style="width: 16%;">อื่นๆ</th><th class="text-danger" style="width: 20%;">รวมสุทธิ</th></tr></thead>
+            <tbody id="summaryTableBody"></tbody>
+            <tfoot class="table-light fw-bold sticky-bottom" id="summaryFooter"></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderLayout('menu-summary', 'สรุปรายได้');
+    let sumData = [];
+
+    async function initSummary() {
+      document.getElementById('loadingSumMsg').classList.remove('d-none');
+      try {
+        sumData = await apiCall('getAllInvoices'); document.getElementById('loadingSumMsg').classList.add('d-none'); generateSummary();
+      } catch(err) { document.getElementById('loadingSumMsg').innerHTML = `<div class="text-danger small">❌ ${err.message}</div>`; }
+    }
+
+    function generateSummary() {
+      let fullMonth = document.getElementById('sumMonth').value; let y = document.getElementById('sumYear').value; let p = document.getElementById('sumPhase').value;
+      let targetMonth = (fullMonth === "ทั้งหมด" || y === "ทั้งหมด") ? "ทั้งหมด" : (fullMonth + " " + y);
+      let tbody = document.getElementById('summaryTableBody'); let tfoot = document.getElementById('summaryFooter'); tbody.innerHTML = '';
+      let sumRent = 0, sumWater = 0, sumElec = 0, sumOther = 0, sumTotal = 0; let count = 0;
+
+      sumData.forEach(row => {
+        let rowMonth = String(row[0]).trim(); let rowPhase = String(row[1]).trim();
+        if(((targetMonth === "ทั้งหมด") || (rowMonth === targetMonth)) && ((p === "ทั้งหมด") || (rowPhase === p))) {
+          count++; let rent = parseFloat(row[3])||0; let wAmt = Math.ceil((parseFloat(row[5])-parseFloat(row[4]))*25)||0; let eAmt = Math.ceil((parseFloat(row[7])-parseFloat(row[6]))*7)||0; let other = parseFloat(row[8])||0; let total = parseFloat(row[9])||0;
+          sumRent+=rent; sumWater+=wAmt; sumElec+=eAmt; sumOther+=other; sumTotal+=total;
+          let shortDate = rowMonth.replace("มกราคม","ม.ค.").replace("มีนาคม","มี.ค.").replace("2569","69");
+          tbody.innerHTML += `<tr><td class="text-nowrap">${shortDate}</td><td class="fw-bold">${rowPhase.replace("เฟส ","")}-${row[2]}</td><td>${rent.toLocaleString()}</td><td>${wAmt.toLocaleString()}</td><td>${eAmt.toLocaleString()}</td><td>${other.toLocaleString()}</td><td class="text-danger fw-bold">${total.toLocaleString()}</td></tr>`;
+        }
+      });
+      if(count===0) { tbody.innerHTML=`<tr><td colspan="7" class="text-muted py-4 small">ไม่พบข้อมูล</td></tr>`; tfoot.innerHTML=''; }
+      else { tfoot.innerHTML=`<tr style="font-size: 0.8rem;"><td colspan="2" class="text-end text-primary">รวม:</td><td class="text-primary">${sumRent.toLocaleString()}</td><td class="text-primary">${sumWater.toLocaleString()}</td><td class="text-primary">${sumElec.toLocaleString()}</td><td class="text-primary">${sumOther.toLocaleString()}</td><td class="text-danger fw-bold fs-6">${sumTotal.toLocaleString()}</td></tr>`; }
+    }
+    initSummary();
+  </script>
+</body>
+</html>
