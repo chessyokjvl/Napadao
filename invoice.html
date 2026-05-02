@@ -17,7 +17,14 @@
     .total-amount-row { font-size: 1.1rem; color: #ff4081; font-weight: bold; margin-top: 8px; padding-top: 8px; border-top: 2px solid #2c3e50; }
     .payment-box { background-color: #f4f7f6; border: 1px dashed #bdc3c7; border-radius: 8px; padding: 10px; margin-top: 12px; text-align: center; font-size: 0.8rem; }
     .control-panel { background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; }
-    @media print { .control-panel, .btn-download, #layout-sidebar, .topbar { display: none !important; } .main-wrapper { width: 100% !important; } .invoice-card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; } .col-md-6 { width: 50%; float: left; padding: 0 10px; } }
+    
+    /* ซ่อนปุ่มต่างๆ เวลาสั่งพิมพ์ลงกระดาษ */
+    @media print { 
+      .control-panel, .btn-download, #layout-sidebar, .topbar { display: none !important; } 
+      .main-wrapper { width: 100% !important; } 
+      .invoice-card { border: 1px solid #ccc; box-shadow: none; page-break-inside: avoid; } 
+      .col-md-6 { width: 50%; float: left; padding: 0 10px; } 
+    }
   </style>
 </head>
 <body>
@@ -25,10 +32,18 @@
   <div class="main-wrapper">
     <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
     <div class="main-content">
+      
       <div class="control-panel">
-        <select class="form-select form-select-sm" id="filterMonthYear" onchange="applyCardFilter()" style="max-width: 140px;"></select>
-        <button class="btn btn-primary btn-sm" onclick="window.print()"><i class="bi bi-printer-fill"></i> พิมพ์</button>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+          <select class="form-select form-select-sm" id="filterMonthYear" onchange="applyCardFilter()" style="max-width: 140px;"></select>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" id="showTenantName" checked onchange="applyCardFilter()">
+            <label class="form-check-label fw-bold text-secondary" style="font-size: 0.85rem;" for="showTenantName">แสดงชื่อผู้เช่า</label>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm mt-2 mt-sm-0" onclick="window.print()"><i class="bi bi-printer-fill"></i> พิมพ์ทั้งหมด</button>
       </div>
+
       <div id="loadingInvMsg" class="text-center text-primary my-4"><div class="spinner-border spinner-border-sm"></div></div>
       <div class="row" id="invoiceCardArea"></div>
     </div>
@@ -51,7 +66,13 @@
     }
 
     function applyCardFilter() {
-      let selectedMonth = document.getElementById('filterMonthYear').value; let container = document.getElementById('invoiceCardArea'); container.innerHTML = ''; let matchCount = 0;
+      let selectedMonth = document.getElementById('filterMonthYear').value; 
+      
+      // ดึงสถานะของปุ่มสวิตช์ ว่าเลือกให้แสดงชื่อหรือไม่
+      let isShowTenant = document.getElementById('showTenantName').checked;
+      
+      let container = document.getElementById('invoiceCardArea'); container.innerHTML = ''; let matchCount = 0;
+      
       allInvoiceData.forEach((row, index) => {
         let rowMonth = String(row[0]||"");
         if (selectedMonth === "ทั้งหมด" || rowMonth === selectedMonth) {
@@ -61,7 +82,16 @@
           let remark = row[10] ? `<div class="text-danger mt-1" style="font-size: 0.75rem;">* หมายเหตุ: ${row[10]}</div>` : "";
           let displayPhase = String(row[1]||"").replace("เฟส ", "").replace("เฟส", "").trim();
           let cardId = `card-img-${index}`; let safeFileName = `บิล_${room}_${rowMonth.replace(/\s+/g, "_")}`;
-          let tenantHTML = (String(row[12]) === "ว่าง" || !row[11]) ? `<span class="badge bg-danger rounded-pill px-3 py-1 mb-2"><i class="bi bi-person-x-fill"></i> ไม่มีผู้เช่า</span>` : `<div class="text-primary mb-2" style="font-size: 0.85rem;"><i class="bi bi-person-check-fill"></i> ผู้เช่า: <strong>${row[11]}</strong></div>`;
+          
+          let tenantHTML = "";
+          if (isShowTenant) {
+            // ถ้าติ๊กเลือก "แสดงชื่อ" ให้โชว์ข้อมูลตามปกติ
+            tenantHTML = (String(row[12]) === "ว่าง" || !row[11]) ? `<span class="badge bg-danger rounded-pill px-3 py-1 mb-2"><i class="bi bi-person-x-fill"></i> ไม่มีผู้เช่า</span>` : `<div class="text-primary mb-2" style="font-size: 0.85rem;"><i class="bi bi-person-check-fill"></i> ผู้เช่า: <strong>${row[11]}</strong></div>`;
+          } else {
+            // ถ้าติ๊กปิด "แสดงชื่อ" ให้เว้นช่องว่างหลอกๆ เอาไว้เพื่อรักษาความสูงของการ์ดไม่ให้หดตัว
+            tenantHTML = `<div class="mb-2" style="height: 24px;"></div>`; 
+          }
+
           let otherHTML = otherAmt !== 0 ? `<div class="flex-row-data"><span class="item-label">ค่าใช้จ่ายอื่นๆ:</span> <strong>${otherAmt.toLocaleString()} บาท</strong></div>` : "";
 
           container.innerHTML += `<div class="col-md-6 col-sm-12 mb-3"><div class="invoice-card" id="${cardId}"><div class="invoice-brand">นภาดาวอพาร์ตเมนต์</div><div class="invoice-subtitle">ประจำเดือน ${rowMonth}</div><div class="invoice-header-info"><div>เฟส: <strong>${displayPhase}</strong></div><div>ห้อง: <strong>${room}</strong></div></div><div class="text-center">${tenantHTML}</div><div class="flex-row-data"><span>ค่าเช่าห้องพัก:</span> <strong>${rent.toLocaleString()} บาท</strong></div><div class="flex-row-data"><div>ค่าน้ำประปา <span style="font-size:0.75rem; color:#95a5a6; display:block;">(${pWater} ถึง ${cWater} = ${(cWater-pWater).toFixed(1)} หน่วย)</span></div><strong>${wAmt.toLocaleString()} บาท</strong></div><div class="flex-row-data"><div>ค่าไฟฟ้า <span style="font-size:0.75rem; color:#95a5a6; display:block;">(${pElec} ถึง ${cElec} = ${(cElec-pElec).toFixed(1)} หน่วย)</span></div><strong>${eAmt.toLocaleString()} บาท</strong></div>${otherHTML}${remark}<div class="flex-row-data total-amount-row"><span>ยอดชำระสุทธิ:</span> <span>${total.toLocaleString()} บาท</span></div><div class="payment-box"><div class="fw-bold mb-1"><i class="bi bi-qr-code-scan"></i> ชำระเงินผ่าน PromptPay</div>โทรศัพท์: <strong>084-683-0483</strong><br>ชื่อบัญชี: <strong>น.ส.ชื่นนภา ชัชวาลย์</strong></div></div><button class="btn btn-outline-success btn-sm w-100 fw-bold btn-download" onclick="downloadAsImage('${cardId}', '${safeFileName}')"><i class="bi bi-download"></i> บันทึกรูปภาพ</button></div>`;
@@ -76,6 +106,7 @@
         let link = document.createElement('a'); link.download = fileName + '.png'; link.href = canvas.toDataURL('image/png'); link.click();
       });
     }
+    
     initInvoiceCards();
   </script>
 </body>
