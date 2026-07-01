@@ -44,9 +44,8 @@
 
     async function initSummary() {
       document.getElementById('loadingSumMsg').classList.remove('d-none');
-      try {
-        sumData = await apiCall('getAllInvoices'); document.getElementById('loadingSumMsg').classList.add('d-none'); generateSummary();
-      } catch(err) { document.getElementById('loadingSumMsg').innerHTML = `<div class="text-danger small">❌ ${err.message}</div>`; }
+      try { sumData = await apiCall('getAllInvoices'); document.getElementById('loadingSumMsg').classList.add('d-none'); generateSummary(); } 
+      catch(err) { document.getElementById('loadingSumMsg').innerHTML = `<div class="text-danger small">❌ ${err.message}</div>`; }
     }
 
     function generateSummary() {
@@ -58,14 +57,20 @@
       sumData.forEach(row => {
         let rowMonth = String(row[0]).trim(); let rowPhase = String(row[1]).trim();
         if(((targetMonth === "ทั้งหมด") || (rowMonth === targetMonth)) && ((p === "ทั้งหมด") || (rowPhase === p))) {
-          count++; let rent = parseFloat(row[3])||0; let wAmt = Math.ceil((parseFloat(row[5])-parseFloat(row[4]))*25)||0; let eAmt = Math.ceil((parseFloat(row[7])-parseFloat(row[6]))*7)||0; let other = parseFloat(row[8])||0; let total = parseFloat(row[9])||0;
+          count++; let rent = parseFloat(row[3])||0; let other = parseFloat(row[8])||0; let total = parseFloat(row[9])||0;
+          let wUnits = (parseFloat(row[5])-parseFloat(row[4])) > 0 ? (parseFloat(row[5])-parseFloat(row[4])) : 0; 
+          let eUnits = (parseFloat(row[7])-parseFloat(row[6])) > 0 ? (parseFloat(row[7])-parseFloat(row[6])) : 0;
+          
+          let wAmt = row[13] !== "" && row[13] !== undefined ? parseFloat(row[13]) : Math.ceil(wUnits*25); 
+          let eAmt = row[14] !== "" && row[14] !== undefined ? parseFloat(row[14]) : Math.ceil(eUnits*7);
+          
           sumRent+=rent; sumWater+=wAmt; sumElec+=eAmt; sumOther+=other; sumTotal+=total;
           let shortDate = rowMonth.replace("มกราคม","ม.ค.").replace("มีนาคม","มี.ค.").replace("2569","69");
-          tbody.innerHTML += `<tr><td class="text-nowrap">${shortDate}</td><td class="fw-bold">${rowPhase.replace("เฟส ","")}-${row[2]}</td><td>${rent.toLocaleString()}</td><td>${wAmt.toLocaleString()}</td><td>${eAmt.toLocaleString()}</td><td>${other.toLocaleString()}</td><td class="text-danger fw-bold">${total.toLocaleString()}</td></tr>`;
+          tbody.innerHTML += `<tr><td class="text-nowrap">${shortDate}</td><td class="fw-bold">${rowPhase.replace("เฟส ","")}-${row[2]}</td><td>${rent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td>${wAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td>${eAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td>${other.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td class="text-danger fw-bold">${total.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
         }
       });
       if(count===0) { tbody.innerHTML=`<tr><td colspan="7" class="text-muted py-4 small">ไม่พบข้อมูล</td></tr>`; tfoot.innerHTML=''; }
-      else { tfoot.innerHTML=`<tr style="font-size: 0.8rem;"><td colspan="2" class="text-end text-primary">รวม:</td><td class="text-primary">${sumRent.toLocaleString()}</td><td class="text-primary">${sumWater.toLocaleString()}</td><td class="text-primary">${sumElec.toLocaleString()}</td><td class="text-primary">${sumOther.toLocaleString()}</td><td class="text-danger fw-bold fs-6">${sumTotal.toLocaleString()}</td></tr>`; }
+      else { tfoot.innerHTML=`<tr style="font-size: 0.8rem;"><td colspan="2" class="text-end text-primary">รวม:</td><td class="text-primary">${sumRent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td class="text-primary">${sumWater.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td class="text-primary">${sumElec.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td class="text-primary">${sumOther.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td class="text-danger fw-bold fs-6">${sumTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`; }
     }
     initSummary();
   </script>
