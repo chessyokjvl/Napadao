@@ -49,6 +49,11 @@
     }
 
     function generateSummary() {
+      let safeParse = (val, fallback) => {
+        let clean = String(val || "").replace(/,/g, '').trim();
+        let num = parseFloat(clean);
+        return (clean === "" || clean === "undefined" || clean === "null" || isNaN(num) || num === 0) ? fallback : num;
+      };
       let fullMonth = document.getElementById('sumMonth').value; let y = document.getElementById('sumYear').value; let p = document.getElementById('sumPhase').value;
       let targetMonth = (fullMonth === "ทั้งหมด" || y === "ทั้งหมด") ? "ทั้งหมด" : (fullMonth + " " + y);
       let tbody = document.getElementById('summaryTableBody'); let tfoot = document.getElementById('summaryFooter'); tbody.innerHTML = '';
