@@ -63,12 +63,16 @@
         let rowMonth = String(row[0]).trim(); let rowPhase = String(row[1]).trim();
         if(((targetMonth === "ทั้งหมด") || (rowMonth === targetMonth)) && ((p === "ทั้งหมด") || (rowPhase === p))) {
           count++; let rent = parseFloat(row[3])||0; let other = parseFloat(row[8])||0; let total = parseFloat(row[9])||0;
-          let wUnits = (parseFloat(row[5])-parseFloat(row[4])) > 0 ? (parseFloat(row[5])-parseFloat(row[4])) : 0; 
-          let eUnits = (parseFloat(row[7])-parseFloat(row[6])) > 0 ? (parseFloat(row[7])-parseFloat(row[6])) : 0;
+
+        let wUnits = Math.max(0, safeParse(row[5], 0) - safeParse(row[4], 0)); 
+        let eUnits = Math.max(0, safeParse(row[7], 0) - safeParse(row[6], 0));
           
-          let wAmt = row[13] !== "" && row[13] !== undefined ? parseFloat(row[13]) : Math.ceil(wUnits*25); 
-          let eAmt = row[14] !== "" && row[14] !== undefined ? parseFloat(row[14]) : Math.ceil(eUnits*7);
-          
+        let wRate = safeParse(row[11], 25);
+        let eRate = safeParse(row[12], 7);
+
+        let wAmt = wUnits > 0 ? safeParse(row[13], Math.ceil((wUnits * wRate) * 100) / 100) : 0;
+        let eAmt = eUnits > 0 ? safeParse(row[14], Math.ceil((eUnits * eRate) * 100) / 100) : 0;
+         
           sumRent+=rent; sumWater+=wAmt; sumElec+=eAmt; sumOther+=other; sumTotal+=total;
           let shortDate = rowMonth.replace("มกราคม","ม.ค.").replace("มีนาคม","มี.ค.").replace("2569","69");
           tbody.innerHTML += `<tr><td class="text-nowrap">${shortDate}</td><td class="fw-bold">${rowPhase.replace("เฟส ","")}-${row[2]}</td><td>${rent.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td>${wAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td>${eAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td>${other.toLocaleString(undefined, {minimumFractionDigits: 2})}</td><td class="text-danger fw-bold">${total.toLocaleString(undefined, {minimumFractionDigits: 2})}</td></tr>`;
