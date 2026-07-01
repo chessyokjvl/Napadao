@@ -123,9 +123,9 @@
 
     async function saveMeters() {
       let billMonth = document.getElementById('selMonth').value + " " + document.getElementById('selYear').value;
-      
       let r1 = parseFloat(document.getElementById('manualRate1').value) || 0;
       let r2 = parseFloat(document.getElementById('manualRate2').value) || 0;
+      
       if(r1 === 0 || r2 === 0) {
         if(!confirm("⚠️ คุณยังไม่ได้คำนวณเรทจากบิลหลวง (หรือเรทมีค่าเป็น 0)\nระบบจะบันทึกค่ามิเตอร์ด้วยเรท 0 บาท/หน่วย ใช่หรือไม่?")) return;
       }
@@ -142,7 +142,8 @@
       
       document.getElementById('saveBtn').disabled = true; document.getElementById('statusMsg').className = "mt-2 text-primary"; document.getElementById('statusMsg').innerText = "กำลังอัปเดต...";
       try {
-        let payload = { billMonth: billMonth, type: isWater?'WATER':'ELEC', batchData: batchData, rates: { "เฟส 1": r1, "เฟส 2": r2 } };
+        // แก้ไขการส่ง rates ให้เป็น "1" กับ "2" ถ้วนๆ
+        let payload = { billMonth: billMonth, type: isWater?'WATER':'ELEC', batchData: batchData, rates: { "1": r1, "2": r2 } };
         let res = await apiCall('saveMeterBatch', 'POST', payload);
         if(res.success){ document.getElementById('statusMsg').className="mt-2 text-success"; document.getElementById('statusMsg').innerText="✅ "+res.message; setTimeout(()=>loadMeterData(), 1500); }
         else throw new Error(res.message);
