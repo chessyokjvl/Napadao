@@ -58,6 +58,12 @@
     }
 
     function applyCardFilter() {
+      let safeParse = (val, fallback) => {
+      let clean = String(val || "").replace(/,/g, '').trim();
+      let num = parseFloat(clean);
+      return (clean === "" || clean === "undefined" || clean === "null" || isNaN(num) || num === 0) ? fallback : num;
+      };
+      
       let selectedMonth = document.getElementById('filterMonthYear').value; 
       let isShowTenant = document.getElementById('showTenantName').checked;
       let container = document.getElementById('invoiceCardArea'); container.innerHTML = ''; let matchCount = 0;
