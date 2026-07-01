@@ -74,14 +74,14 @@
           matchCount++;
           let room = String(row[2]||""); let rent = parseFloat(row[3])||0; let pWater = parseFloat(row[4])||0; let cWater = parseFloat(row[5])||0; let pElec = parseFloat(row[6])||0; let cElec = parseFloat(row[7])||0; let otherAmt = parseFloat(row[8])||0;
           
-          let wUnits = (cWater-pWater) > 0 ? (cWater-pWater) : 0; 
-          let eUnits = (cElec-pElec) > 0 ? (cElec-pElec) : 0;
+          let wUnits = Math.max(0, cWater - pWater);
+          let eUnits = Math.max(0, cElec - pElec);
           
-          // ดึงเรทใหม่ (ถ้าบิลเก่าไม่มี ให้ใช้ 25 กับ 7 ตามเดิม)
-          let wRate = row[11] !== "" && row[11] !== undefined ? parseFloat(row[11]) : 25;
-          let eRate = row[12] !== "" && row[12] !== undefined ? parseFloat(row[12]) : 7;
-          let wAmt = row[13] !== "" && row[13] !== undefined ? parseFloat(row[13]) : Math.ceil(wUnits * 25);
-          let eAmt = row[14] !== "" && row[14] !== undefined ? parseFloat(row[14]) : Math.ceil(eUnits * 7);
+          let wRate = safeParse(row[11], 25);
+          let eRate = safeParse(row[12], 7);
+          
+          let wAmt = wUnits > 0 ? safeParse(row[13], Math.ceil((wUnits * wRate) * 100) / 100) : 0;
+          let eAmt = eUnits > 0 ? safeParse(row[14], Math.ceil((eUnits * eRate) * 100) / 100) : 0;
           
           let total = parseFloat(row[9])||0;
           let remark = row[10] ? `<div class="text-danger mt-1" style="font-size: 0.75rem;">* หมายเหตุ: ${row[10]}</div>` : "";
