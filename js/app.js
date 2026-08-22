@@ -34,6 +34,7 @@ function renderLayout(activeMenuId, pageTitle) {
         <a href="meter.html?type=water" class="${activeMenuId==='menu-water'?'active':''}"><i class="bi bi-droplet-fill"></i> บันทึกมิเตอร์น้ำ</a>
         <a href="meter.html?type=elec" class="${activeMenuId==='menu-elec'?'active':''}"><i class="bi bi-lightning-charge-fill"></i> บันทึกมิเตอร์ไฟ</a>
         <a href="invoice.html" class="${activeMenuId==='menu-invoice'?'active':''}"><i class="bi bi-receipt"></i> ใบแจ้งยอด</a>
+        <a href="contract.html" class="${activeMenuId==='menu-contract'?'active':''}"><i class="bi bi-file-earmark-text"></i> สัญญาเช่า</a>
         <a href="summary.html" class="${activeMenuId==='menu-summary'?'active':''}"><i class="bi bi-table"></i> สรุปรายได้</a>
         <a href="maintenance.html" class="${activeMenuId==='menu-maint'?'active':''}"><i class="bi bi-tools"></i> แจ้งซ่อมบำรุง</a>
       </div>
