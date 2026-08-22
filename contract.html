@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สัญญาเช่า - นภาดาวอพาร์ตเมนต์</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .table-compact th, .table-compact td { padding: 0.5rem 0.2rem; font-size: 0.85rem; vertical-align: middle; }
+    @media (max-width: 768px) { .table-compact th, .table-compact td { font-size: 0.75rem; } }
+  </style>
+</head>
+<body>
+  <div id="layout-sidebar"></div>
+  <div class="main-wrapper">
+    <div class="topbar"><div class="d-flex align-items-center"><button class="btn-toggle-menu" onclick="toggleSidebar()"><i class="bi bi-list"></i></button><h4 class="mb-0 text-dark fw-bold" id="pageTitle"></h4></div></div>
+    
+    <div class="main-content">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-folder2-open"></i> ฐานข้อมูลสัญญาเช่า</h5>
+        <button class="btn btn-primary btn-sm fw-bold" onclick="newContractModal.show()"><i class="bi bi-plus-lg"></i> สร้างสัญญาใหม่</button>
+      </div>
+
+      <div id="loadingMsg" class="text-center text-primary my-5"><div class="spinner-border"></div></div>
+      
+      <div class="container-fluid bg-white p-2 p-md-4 rounded shadow-sm d-none" id="contentSection">
+        <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
+          <table class="table table-hover table-bordered align-middle text-center table-compact" style="width: 100%;">
+            <thead class="table-light sticky-top"><tr><th>วันที่ออกสัญญา</th><th>เฟส-ห้อง</th><th>ชื่อผู้เช่า</th><th>ช่วงเวลาสัญญา</th><th>เอกสาร PDF</th></tr></thead>
+            <tbody id="contractTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal สร้างสัญญา -->
+  <div class="modal fade" id="newContractModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-header bg-primary text-white py-2">
+          <h6 class="modal-title mb-0 fw-bold"><i class="bi bi-pencil-square"></i> ร่างสัญญาเช่าฉบับใหม่</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" style="font-size: 0.9rem;">
+          <form id="contractForm" onsubmit="submitContract(event)">
+            <div class="row g-2 mb-2">
+              <div class="col-6 col-md-3"><label class="fw-bold">เฟส</label><select class="form-select form-select-sm" id="cPhase" required><option value="เฟส 1">เฟส 1</option><option value="เฟส 2">เฟส 2</option></select></div>
+              <div class="col-6 col-md-3"><label class="fw-bold">ห้อง</label><input type="text" class="form-control form-control-sm" id="cRoom" required placeholder="เช่น A1"></div>
+              <div class="col-12 col-md-6"><label class="fw-bold">ชื่อ-สกุล ผู้เช่า</label><input type="text" class="form-control form-control-sm" id="cTenant" required></div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-12 col-md-4"><label class="fw-bold">เบอร์โทรศัพท์</label><input type="text" class="form-control form-control-sm" id="cPhone" required></div>
+              <div class="col-6 col-md-4"><label class="fw-bold">วันเริ่มต้นสัญญา</label><input type="date" class="form-control form-control-sm" id="cStart" required></div>
+              <div class="col-6 col-md-4"><label class="fw-bold">วันสิ้นสุดสัญญา</label><input type="date" class="form-control form-control-sm" id="cEnd" required></div>
+            </div>
+            <div class="row g-2 mb-3 bg-light p-2 rounded border">
+              <div class="col-6 col-md-3"><label class="fw-bold">ค่าเช่า/เดือน</label><input type="number" class="form-control form-control-sm text-primary fw-bold" id="cRent" required></div>
+              <div class="col-6 col-md-3"><label class="fw-bold">ค่าน้ำ/หน่วย</label><input type="number" step="0.01" class="form-control form-control-sm text-info fw-bold" id="cWater" required></div>
+              <div class="col-6 col-md-3"><label class="fw-bold">ค่าไฟ/หน่วย</label><input type="number" step="0.01" class="form-control form-control-sm text-warning fw-bold" id="cElec" required></div>
+              <div class="col-6 col-md-3"><label class="fw-bold">เงินประกัน</label><input type="number" class="form-control form-control-sm text-success fw-bold" id="cDeposit" required></div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnSubmitContract">บันทึก & สร้างไฟล์ PDF</button>
+            <div id="formStatus" class="mt-2 text-center fw-bold small"></div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    renderLayout('menu-contract', 'จัดการสัญญาเช่า');
+    let newContractModal = new bootstrap.Modal(document.getElementById('newContractModal'));
+
+    async function loadContracts() {
+      try {
+        let data = await apiCall('getContractsData');
+        let tbody = document.getElementById('contractTableBody'); tbody.innerHTML = '';
+        data.slice().reverse().forEach(row => {
+          let dateStr = new Date(row[0]).toLocaleDateString('th-TH');
+          let phaseRoom = `${String(row[1]).replace("เฟส ","")}-${row[2]}`;
+          let period = `${new Date(row[5]).toLocaleDateString('th-TH', {month:'short', year:'2-digit'})} - ${new Date(row[6]).toLocaleDateString('th-TH', {month:'short', year:'2-digit'})}`;
+          let btn = `<a href="${row[11]}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-pdf-fill"></i> ดู PDF</a>`;
+          tbody.innerHTML += `<tr><td>${dateStr}</td><td class="fw-bold">${phaseRoom}</td><td class="text-start">${row[3]}<br><small class="text-muted"><i class="bi bi-telephone"></i> ${row[4]}</small></td><td>${period}</td><td>${btn}</td></tr>`;
+        });
+        document.getElementById('loadingMsg').classList.add('d-none'); document.getElementById('contentSection').classList.remove('d-none');
+      } catch(err) { document.getElementById('loadingMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3">❌ Error: ${err.message}</div>`; }
+    }
+
+    async function submitContract(e) {
+      e.preventDefault(); 
+      document.getElementById('btnSubmitContract').disabled = true; 
+      let statusEl = document.getElementById('formStatus');
+      statusEl.className = "mt-2 text-primary"; statusEl.innerText = "กำลังประมวลผล และสร้างไฟล์ PDF ลง Google Drive (อาจใช้เวลา 10-15 วินาที)...";
+      
+      let payload = {
+        phase: document.getElementById('cPhase').value, room: document.getElementById('cRoom').value,
+        tenantName: document.getElementById('cTenant').value, phone: document.getElementById('cPhone').value,
+        startDate: document.getElementById('cStart').value, endDate: document.getElementById('cEnd').value,
+        rent: document.getElementById('cRent').value, water: document.getElementById('cWater').value,
+        elec: document.getElementById('cElec').value, deposit: document.getElementById('cDeposit').value
+      };
+
+      try {
+        let res = await apiCall('createContract', 'POST', payload);
+        if(res.success){ 
+            statusEl.className="mt-2 text-success"; statusEl.innerHTML=`✅ สำเร็จ! <a href="${res.url}" target="_blank">เปิดดูเอกสาร</a>`; 
+            setTimeout(()=>{ newContractModal.hide(); document.getElementById('btnSubmitContract').disabled=false; loadContracts(); }, 3000); 
+        } else throw new Error(res.message);
+      } catch(err) { statusEl.className="mt-2 text-danger"; statusEl.innerText="❌ "+err.message; document.getElementById('btnSubmitContract').disabled=false; }
+    }
+
+    loadContracts();
+  </script>
+</body>
+</html>
