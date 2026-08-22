@@ -58,8 +58,6 @@
             </div>
             <div class="row g-2 mb-3 bg-light p-2 rounded border">
               <div class="col-6 col-md-3"><label class="fw-bold">ค่าเช่า/เดือน</label><input type="number" class="form-control form-control-sm text-primary fw-bold" id="cRent" required></div>
-              <div class="col-6 col-md-3"><label class="fw-bold">ค่าน้ำ/หน่วย</label><input type="number" step="0.01" class="form-control form-control-sm text-info fw-bold" id="cWater" required></div>
-              <div class="col-6 col-md-3"><label class="fw-bold">ค่าไฟ/หน่วย</label><input type="number" step="0.01" class="form-control form-control-sm text-warning fw-bold" id="cElec" required></div>
               <div class="col-6 col-md-3"><label class="fw-bold">เงินประกัน</label><input type="number" class="form-control form-control-sm text-success fw-bold" id="cDeposit" required></div>
             </div>
             <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnSubmitContract">บันทึก & สร้างไฟล์ PDF</button>
@@ -101,8 +99,10 @@
         phase: document.getElementById('cPhase').value, room: document.getElementById('cRoom').value,
         tenantName: document.getElementById('cTenant').value, phone: document.getElementById('cPhone').value,
         startDate: document.getElementById('cStart').value, endDate: document.getElementById('cEnd').value,
-        rent: document.getElementById('cRent').value, water: document.getElementById('cWater').value,
-        elec: document.getElementById('cElec').value, deposit: document.getElementById('cDeposit').value
+        rent: document.getElementById('cRent').value, 
+        water: "ตามบิลหลวง", // ปรับเป็นข้อความคงที่
+        elec: "ตามบิลหลวง",  // ปรับเป็นข้อความคงที่
+        deposit: document.getElementById('cDeposit').value
       };
 
       try {
