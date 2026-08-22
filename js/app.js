@@ -8,7 +8,7 @@ if (!currentAdmin && !isLoginPage) {
 }
 
 // !!! เปลี่ยนเป็น Web App URL ของคุณตรงนี้ !!!
-const API_URL = "https://script.google.com/macros/s/AKfycbwUOJgevOgfl_ZtvnjrFx06WASBZfOSU2piMLetUFi_7DvG2dUpxv6L_WBvcgM_htmeKw/exec"; 
+const API_URL = "https://script.google.com/macros/s/AKfycbz7FUphIV7BB2-rk_vobXajovTbfVu6mIInuCg2p5hwo1vp5rGgVPh95V44QobKN2fPjA/exec"; 
 
 async function apiCall(action, method = 'GET', data = null) {
   let url = API_URL; let options = { method: method };
