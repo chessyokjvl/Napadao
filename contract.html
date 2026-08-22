@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="css/style.css">
   <style>
     .table-compact th, .table-compact td { padding: 0.5rem 0.2rem; font-size: 0.85rem; vertical-align: middle; }
+    .nav-tabs .nav-link { cursor: pointer; color: #6c757d; font-weight: 600; }
+    .nav-tabs .nav-link.active { color: #1a2a6c; border-bottom: 3px solid #1a2a6c; }
+    .accordion-button:not(.collapsed) { background-color: #e8f0fe; color: #1a2a6c; box-shadow: none; }
     @media (max-width: 768px) { .table-compact th, .table-compact td { font-size: 0.75rem; } }
   </style>
 </head>
@@ -19,19 +22,37 @@
     
     <div class="main-content">
       <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-folder2-open"></i> ฐานข้อมูลสัญญาเช่า</h5>
+        <h5 class="fw-bold text-secondary mb-0"><i class="bi bi-folder2-open"></i> จัดการสัญญาเช่า</h5>
         <button class="btn btn-primary btn-sm fw-bold" onclick="newContractModal.show()"><i class="bi bi-plus-lg"></i> สร้างสัญญาใหม่</button>
       </div>
 
       <div id="loadingMsg" class="text-center text-primary my-5"><div class="spinner-border"></div></div>
       
-      <div class="container-fluid bg-white p-2 p-md-4 rounded shadow-sm d-none" id="contentSection">
-        <div class="table-responsive" style="max-height: 65vh; overflow-y: auto;">
+      <div class="container-fluid bg-white p-3 rounded shadow-sm d-none" id="contentSection">
+        
+        <!-- Tabs สำหรับเลือกมุมมอง -->
+        <ul class="nav nav-tabs mb-3" id="contractTabs">
+          <li class="nav-item">
+            <a class="nav-link active" id="tab-list" onclick="switchView('list')"><i class="bi bi-list-ul"></i> รายการสัญญาล่าสุด</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="tab-archive" onclick="switchView('archive')"><i class="bi bi-archive-fill"></i> แฟ้มประวัติรายห้อง</a>
+          </li>
+        </ul>
+
+        <!-- มุมมอง 1: ตารางรายการล่าสุด -->
+        <div id="view-list" class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
           <table class="table table-hover table-bordered align-middle text-center table-compact" style="width: 100%;">
             <thead class="table-light sticky-top"><tr><th>วันที่ออกสัญญา</th><th>เฟส-ห้อง</th><th>ชื่อผู้เช่า</th><th>ช่วงเวลาสัญญา</th><th>เอกสาร PDF</th></tr></thead>
             <tbody id="contractTableBody"></tbody>
           </table>
         </div>
+
+        <!-- มุมมอง 2: แฟ้มประวัติรายห้อง (Accordion) -->
+        <div id="view-archive" class="d-none" style="max-height: 60vh; overflow-y: auto;">
+          <div class="accordion" id="archiveAccordion"></div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -57,8 +78,8 @@
               <div class="col-6 col-md-4"><label class="fw-bold">วันสิ้นสุดสัญญา</label><input type="date" class="form-control form-control-sm" id="cEnd" required></div>
             </div>
             <div class="row g-2 mb-3 bg-light p-2 rounded border">
-              <div class="col-6 col-md-3"><label class="fw-bold">ค่าเช่า/เดือน</label><input type="number" class="form-control form-control-sm text-primary fw-bold" id="cRent" required></div>
-              <div class="col-6 col-md-3"><label class="fw-bold">เงินประกัน</label><input type="number" class="form-control form-control-sm text-success fw-bold" id="cDeposit" required></div>
+              <div class="col-6"><label class="fw-bold">ค่าเช่า/เดือน</label><input type="number" class="form-control form-control-sm text-primary fw-bold" id="cRent" required></div>
+              <div class="col-6"><label class="fw-bold">เงินประกัน</label><input type="number" class="form-control form-control-sm text-success fw-bold" id="cDeposit" required></div>
             </div>
             <button type="submit" class="btn btn-primary w-100 fw-bold" id="btnSubmitContract">บันทึก & สร้างไฟล์ PDF</button>
             <div id="formStatus" class="mt-2 text-center fw-bold small"></div>
@@ -73,20 +94,102 @@
   <script>
     renderLayout('menu-contract', 'จัดการสัญญาเช่า');
     let newContractModal = new bootstrap.Modal(document.getElementById('newContractModal'));
+    let allContracts = [];
+
+    // ฟังก์ชันสลับหน้าต่าง (Tabs)
+    function switchView(view) {
+      document.getElementById('tab-list').classList.remove('active');
+      document.getElementById('tab-archive').classList.remove('active');
+      document.getElementById('view-list').classList.add('d-none');
+      document.getElementById('view-archive').classList.add('d-none');
+      
+      document.getElementById(`tab-${view}`).classList.add('active');
+      document.getElementById(`view-${view}`).classList.remove('d-none');
+    }
 
     async function loadContracts() {
       try {
-        let data = await apiCall('getContractsData');
-        let tbody = document.getElementById('contractTableBody'); tbody.innerHTML = '';
-        data.slice().reverse().forEach(row => {
-          let dateStr = new Date(row[0]).toLocaleDateString('th-TH');
-          let phaseRoom = `${String(row[1]).replace("เฟส ","")}-${row[2]}`;
-          let period = `${new Date(row[5]).toLocaleDateString('th-TH', {month:'short', year:'2-digit'})} - ${new Date(row[6]).toLocaleDateString('th-TH', {month:'short', year:'2-digit'})}`;
-          let btn = `<a href="${row[11]}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-pdf-fill"></i> ดู PDF</a>`;
-          tbody.innerHTML += `<tr><td>${dateStr}</td><td class="fw-bold">${phaseRoom}</td><td class="text-start">${row[3]}<br><small class="text-muted"><i class="bi bi-telephone"></i> ${row[4]}</small></td><td>${period}</td><td>${btn}</td></tr>`;
+        allContracts = await apiCall('getContractsData');
+        renderListView();
+        renderArchiveView();
+        document.getElementById('loadingMsg').classList.add('d-none'); 
+        document.getElementById('contentSection').classList.remove('d-none');
+      } catch(err) { 
+        document.getElementById('loadingMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3">❌ Error: ${err.message}</div>`; 
+      }
+    }
+
+    // วาดตารางมุมมองปกติ
+    function renderListView() {
+      let tbody = document.getElementById('contractTableBody'); 
+      tbody.innerHTML = '';
+      allContracts.slice().reverse().forEach(row => {
+        let dateStr = new Date(row[0]).toLocaleDateString('th-TH');
+        let phaseRoom = `${String(row[1]).replace("เฟส ","")}-${row[2]}`;
+        let period = `${new Date(row[5]).toLocaleDateString('th-TH', {month:'short', year:'2-digit'})} - ${new Date(row[6]).toLocaleDateString('th-TH', {month:'short', year:'2-digit'})}`;
+        let btn = `<a href="${row[11]}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-pdf-fill"></i> PDF</a>`;
+        tbody.innerHTML += `<tr><td>${dateStr}</td><td class="fw-bold">${phaseRoom}</td><td class="text-start">${row[3]}<br><small class="text-muted"><i class="bi bi-telephone"></i> ${row[4]}</small></td><td>${period}</td><td>${btn}</td></tr>`;
+      });
+    }
+
+    // วาดแฟ้มประวัติรายห้อง (Accordion)
+    function renderArchiveView() {
+      let archiveArea = document.getElementById('archiveAccordion');
+      archiveArea.innerHTML = '';
+      
+      // จัดกลุ่มสัญญาตามห้อง
+      let grouped = {};
+      allContracts.forEach(row => {
+        let key = `${row[1]}-ห้อง-${row[2]}`; // เช่น เฟส 1-ห้อง-A1
+        if(!grouped[key]) grouped[key] = { phase: row[1], room: row[2], contracts: [] };
+        grouped[key].contracts.push(row);
+      });
+
+      // จัดเรียงรายชื่อห้อง
+      let sortedKeys = Object.keys(grouped).sort();
+      
+      let html = '';
+      sortedKeys.forEach((key, index) => {
+        let g = grouped[key];
+        // เรียงสัญญาในห้องนั้นจากใหม่ไปเก่า (อิงตามวันเริ่มสัญญา หรือวันทำสัญญา)
+        g.contracts.sort((a,b) => new Date(b[0]) - new Date(a[0]));
+        
+        let listHtml = '';
+        g.contracts.forEach((c, i) => {
+           let start = new Date(c[5]).toLocaleDateString('th-TH', {year:'numeric', month:'short', day:'numeric'});
+           let end = new Date(c[6]).toLocaleDateString('th-TH', {year:'numeric', month:'short', day:'numeric'});
+           let statusBadge = (i === 0) ? '<span class="badge bg-success ms-2">สัญญาปัจจุบัน</span>' : '<span class="badge bg-secondary ms-2">อดีต</span>';
+           
+           listHtml += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <div class="fw-bold text-dark"><i class="bi bi-person-check text-primary"></i> ${c[3]} ${statusBadge}</div>
+                <small class="text-muted"><i class="bi bi-calendar-range"></i> เข้าพัก: ${start} ถึง ${end} | โทร: ${c[4]}</small>
+              </div>
+              <a href="${c[11]}" target="_blank" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-pdf"></i> เอกสาร</a>
+            </li>`;
         });
-        document.getElementById('loadingMsg').classList.add('d-none'); document.getElementById('contentSection').classList.remove('d-none');
-      } catch(err) { document.getElementById('loadingMsg').innerHTML = `<div class="alert alert-danger mx-auto mt-3">❌ Error: ${err.message}</div>`; }
+
+        html += `
+          <div class="accordion-item mb-2 border rounded shadow-sm">
+            <h2 class="accordion-header" id="heading${index}">
+              <button class="accordion-button collapsed fw-bold py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                <i class="bi bi-door-closed-fill text-primary me-2 fs-5"></i> ${g.phase} ห้อง ${g.room}
+                <span class="badge bg-info text-dark ms-auto">${g.contracts.length} ฉบับ</span>
+              </button>
+            </h2>
+            <div id="collapse${index}" class="accordion-collapse collapse" data-bs-parent="#archiveAccordion">
+              <div class="accordion-body p-0">
+                <ul class="list-group list-group-flush">${listHtml}</ul>
+              </div>
+            </div>
+          </div>`;
+      });
+
+      if (sortedKeys.length === 0) {
+         html = `<div class="text-center text-muted py-4">ยังไม่มีประวัติการทำสัญญา</div>`;
+      }
+      archiveArea.innerHTML = html;
     }
 
     async function submitContract(e) {
@@ -100,8 +203,8 @@
         tenantName: document.getElementById('cTenant').value, phone: document.getElementById('cPhone').value,
         startDate: document.getElementById('cStart').value, endDate: document.getElementById('cEnd').value,
         rent: document.getElementById('cRent').value, 
-        water: "ตามบิลหลวง", // ปรับเป็นข้อความคงที่
-        elec: "ตามบิลหลวง",  // ปรับเป็นข้อความคงที่
+        water: "ตามบิลหลวง", 
+        elec: "ตามบิลหลวง", 
         deposit: document.getElementById('cDeposit').value
       };
 
